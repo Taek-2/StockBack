@@ -34,11 +34,11 @@ interface StockData {
 }
 
 const PRESET_TICKERS = [
-  { symbol: 'VOO', name: 'VOO', currency: 'USD' },
-  { symbol: 'QQQ', name: 'QQQ', currency: 'USD' },
-  { symbol: 'SCHD', name: 'SCHD', currency: 'USD' },
-  { symbol: '005930.KS', name: '삼성전자', currency: 'KRW' },
-  { symbol: '000660.KS', name: 'SK하이닉스', currency: 'KRW' },
+  { symbol: 'VOO', name: 'VOO', currency: 'USD', type: 'US' },
+  { symbol: 'QQQ', name: 'QQQ', currency: 'USD', type: 'US' },
+  { symbol: 'SCHD', name: 'SCHD', currency: 'USD', type: 'US' },
+  { symbol: '005930.KS', name: '삼성전자', currency: 'KRW', type: 'KR' },
+  { symbol: '000660.KS', name: 'SK하이닉스', currency: 'KRW', type: 'KR' },
 ];
 
 const YEAR_PRESETS = [
@@ -68,7 +68,6 @@ export default function Home() {
     setStockData(null);
     setSymbol(tickerSymbol);
 
-    // Set currency based on ticker
     const ticker = PRESET_TICKERS.find(t => t.symbol === tickerSymbol);
     if (ticker) {
       setCurrentCurrency(ticker.currency as 'USD' | 'KRW');
@@ -77,42 +76,36 @@ export default function Home() {
     }
 
     try {
-      // Alpha Vantage API key
-      const API_KEY = '756N6G3DF25M7M9O';
+      // Calculate date range
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setFullYear(startDate.getFullYear() - parseInt(years));
 
-      // Adjust Korean stock symbols for Alpha Vantage
-      const adjustedSymbol = tickerSymbol.replace('.KS', '.KRX');
+      const start = Math.floor(startDate.getTime() / 1000);
+      const end = Math.floor(endDate.getTime() / 1000);
 
-      const response = await axios.get(
-        `https://www.alphavantage.co/query`,
-        {
-          params: {
-            function: 'TIME_SERIES_MONTHLY',
-            symbol: adjustedSymbol,
-            apikey: API_KEY,
-          }
-        }
-      );
-
-      const result = response.data;
+      // Use allorigins as CORS proxy
+      const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${tickerSymbol}?symbol=${tickerSymbol}&period1=${start}&period2=${end}&interval=1mo`;
+      const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(yahooUrl)}`;
       
-      if (!result || !result['Monthly Time Series']) {
+      const response = await axios.get(proxyUrl);
+      const result = response.data.chart.result[0];
+      
+      if (!result) {
         throw new Error('데이터를 찾을 수 없습니다.');
       }
 
-      // Process the data
-      const monthlyData = result['Monthly Time Series'];
-      const chartData = Object.entries(monthlyData)
-        .map(([date, values]: [string, any]) => ({
-          date: new Date(date).toLocaleDateString('ko-KR', {
-            year: 'numeric',
-            month: 'short'
-          }),
-          price: parseFloat(values['4. close'])
-        }))
-        .filter(item => !isNaN(item.price))
-        .reverse() // Oldest to newest
-        .slice(-parseInt(years) * 12); // Last X years of data
+      const timestamps = result.timestamp;
+      const prices = result.indicators.quote[0].close;
+      const adjclose = result.indicators.adjclose?.[0]?.adjclose || prices;
+
+      const chartData = timestamps.map((timestamp: number, index: number) => ({
+        date: new Date(timestamp * 1000).toLocaleDateString('ko-KR', {
+          year: 'numeric',
+          month: 'short'
+        }),
+        price: adjclose[index]
+      })).filter((item: any) => item.price !== null);
 
       if (chartData.length === 0) {
         throw new Error('해당 기간의 데이터가 없습니다.');
@@ -131,11 +124,7 @@ export default function Home() {
       });
     } catch (err: any) {
       console.error('Error fetching stock data:', err);
-      if (err.response?.status === 429) {
-        setError('API 호출 한도를 초과했습니다. 잠시 후 다시 시도해주세요.');
-      } else {
-        setError(err.message || '주식 데이터를 가져오는데 실패했습니다. 다시 시도해주세요.');
-      }
+      setError(err.message || '주식 데이터를 가져오는데 실패했습니다. 다시 시도해주세요.');
     } finally {
       setLoading(false);
     }
