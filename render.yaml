@@ -1,0 +1,22 @@
+services:
+  # Backend API service
+  - type: web
+    name: stockback-api
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python app.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10.0
+
+  # Frontend static site
+  - type: web
+    name: stockback-frontend
+    env: node
+    buildCommand: cd frontend && npm install && npm run build
+    startCommand: cd frontend && npm start
+    envVars:
+      - key: NODE_VERSION
+        value: 18.x
+      - key: NEXT_PUBLIC_API_URL
+        value: https://stockback-api.onrender.com
