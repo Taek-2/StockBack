@@ -14,7 +14,7 @@ services:
   - type: web
     name: stockback-frontend
     env: node
-    dir: frontend
+    rootDir: frontend
     buildCommand: npm install && npm run build
     startCommand: npm start
     envVars:
