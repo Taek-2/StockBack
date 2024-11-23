@@ -77,44 +77,46 @@ export default function Home() {
     }
 
     try {
-      // Calculate start date based on years
-      const endDate = new Date();
-      const startDate = new Date();
-      startDate.setFullYear(startDate.getFullYear() - parseInt(years));
+      // Alpha Vantage API key
+      const API_KEY = 'demo'; // 실제 API 키로 교체 필요
 
-      // Format dates for Yahoo Finance API
-      const start = Math.floor(startDate.getTime() / 1000);
-      const end = Math.floor(endDate.getTime() / 1000);
+      // Adjust Korean stock symbols for Alpha Vantage
+      const adjustedSymbol = tickerSymbol.replace('.KS', '.KRX');
 
-      // Fetch data from Yahoo Finance API
       const response = await axios.get(
-        `https://query1.finance.yahoo.com/v8/finance/chart/${tickerSymbol}`,
+        `https://www.alphavantage.co/query`,
         {
           params: {
-            period1: start,
-            period2: end,
-            interval: '1mo',
-            events: 'history'
+            function: 'TIME_SERIES_MONTHLY',
+            symbol: adjustedSymbol,
+            apikey: API_KEY,
           }
         }
       );
 
-      const result = response.data.chart.result[0];
-      if (!result) {
+      const result = response.data;
+      
+      if (!result || !result['Monthly Time Series']) {
         throw new Error('데이터를 찾을 수 없습니다.');
       }
 
-      const timestamps = result.timestamp;
-      const prices = result.indicators.quote[0].close;
-
       // Process the data
-      const chartData = timestamps.map((timestamp: number, index: number) => ({
-        date: new Date(timestamp * 1000).toLocaleDateString('ko-KR', {
-          year: 'numeric',
-          month: 'short'
-        }),
-        price: prices[index]
-      })).filter((item: any) => item.price !== null);
+      const monthlyData = result['Monthly Time Series'];
+      const chartData = Object.entries(monthlyData)
+        .map(([date, values]: [string, any]) => ({
+          date: new Date(date).toLocaleDateString('ko-KR', {
+            year: 'numeric',
+            month: 'short'
+          }),
+          price: parseFloat(values['4. close'])
+        }))
+        .filter(item => !isNaN(item.price))
+        .reverse() // Oldest to newest
+        .slice(-parseInt(years) * 12); // Last X years of data
+
+      if (chartData.length === 0) {
+        throw new Error('해당 기간의 데이터가 없습니다.');
+      }
 
       const startPrice = chartData[0].price;
       const currentPrice = chartData[chartData.length - 1].price;
@@ -129,7 +131,11 @@ export default function Home() {
       });
     } catch (err: any) {
       console.error('Error fetching stock data:', err);
-      setError(err.message || '주식 데이터를 가져오는데 실패했습니다. 다시 시도해주세요.');
+      if (err.response?.status === 429) {
+        setError('API 호출 한도를 초과했습니다. 잠시 후 다시 시도해주세요.');
+      } else {
+        setError(err.message || '주식 데이터를 가져오는데 실패했습니다. 다시 시도해주세요.');
+      }
     } finally {
       setLoading(false);
     }
