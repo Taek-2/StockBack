@@ -136,7 +136,7 @@ export default function Home() {
         text: `${symbol.toUpperCase()} 주가 변동`,
         font: {
           size: 16,
-          weight: 'bold'
+          weight: 'bold' as const
         }
       },
     },
