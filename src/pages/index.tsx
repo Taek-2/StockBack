@@ -190,22 +190,22 @@ export default function Home() {
   } : null;
 
   return (
-    <div className="min-h-screen bg-gray-100 py-6 flex flex-col justify-center sm:py-12">
-      <style jsx>{`
-        /* Chrome, Safari, Edge, Opera */
-        input::-webkit-outer-spin-button,
-        input::-webkit-inner-spin-button {
-          -webkit-appearance: none;
-          margin: 0;
-        }
+    <main className="min-h-screen bg-gray-100 p-4">
+      <div className="mx-auto max-w-7xl">
+        <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
+          <style jsx>{`
+            /* Chrome, Safari, Edge, Opera */
+            input::-webkit-outer-spin-button,
+            input::-webkit-inner-spin-button {
+              -webkit-appearance: none;
+              margin: 0;
+            }
 
-        /* Firefox */
-        input[type=number] {
-          -moz-appearance: textfield;
-        }
-      `}</style>
-      <div className="relative py-3 sm:max-w-2xl sm:mx-auto w-full px-4">
-        <div className="relative px-4 py-10 bg-white shadow-lg sm:rounded-3xl sm:p-20">
+            /* Firefox */
+            input[type=number] {
+              -moz-appearance: textfield;
+            }
+          `}</style>
           <div className="max-w-md mx-auto">
             <div className="divide-y divide-gray-200">
               <div className="py-8 text-base leading-6 space-y-4 text-gray-700 sm:text-lg sm:leading-7">
@@ -371,6 +371,6 @@ export default function Home() {
       <footer className="text-center text-gray-500 text-sm mt-8">
         2025 오은택. All rights reserved.
       </footer>
-    </div>
+    </main>
   );
 }
