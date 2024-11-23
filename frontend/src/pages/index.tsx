@@ -56,8 +56,6 @@ export default function Home() {
   const [stockData, setStockData] = useState<StockData | null>(null);
   const [currentCurrency, setCurrentCurrency] = useState<'USD' | 'KRW'>('USD');
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
-
   const handleYearChange = (change: number) => {
     const currentYear = parseInt(years);
     const newYear = Math.max(1, Math.min(20, currentYear + change));
@@ -79,36 +77,59 @@ export default function Home() {
     }
 
     try {
-      console.log('Fetching data for:', tickerSymbol, years);
-      const response = await axios.get(`${API_URL}/api/stock`, {
-        params: { symbol: tickerSymbol, years },
-        timeout: 10000
+      // Calculate start date based on years
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setFullYear(startDate.getFullYear() - parseInt(years));
+
+      // Format dates for Yahoo Finance API
+      const start = Math.floor(startDate.getTime() / 1000);
+      const end = Math.floor(endDate.getTime() / 1000);
+
+      // Fetch data from Yahoo Finance API
+      const response = await axios.get(
+        `https://query1.finance.yahoo.com/v8/finance/chart/${tickerSymbol}`,
+        {
+          params: {
+            period1: start,
+            period2: end,
+            interval: '1mo',
+            events: 'history'
+          }
+        }
+      );
+
+      const result = response.data.chart.result[0];
+      if (!result) {
+        throw new Error('데이터를 찾을 수 없습니다.');
+      }
+
+      const timestamps = result.timestamp;
+      const prices = result.indicators.quote[0].close;
+
+      // Process the data
+      const chartData = timestamps.map((timestamp: number, index: number) => ({
+        date: new Date(timestamp * 1000).toLocaleDateString('ko-KR', {
+          year: 'numeric',
+          month: 'short'
+        }),
+        price: prices[index]
+      })).filter((item: any) => item.price !== null);
+
+      const startPrice = chartData[0].price;
+      const currentPrice = chartData[chartData.length - 1].price;
+      const profitPercentage = ((currentPrice - startPrice) / startPrice) * 100;
+
+      setStockData({
+        symbol: tickerSymbol,
+        startPrice,
+        currentPrice,
+        profitPercentage,
+        chartData
       });
-      
-      console.log('Response:', response.data);
-      
-      if (response.data.error) {
-        throw new Error(response.data.error);
-      }
-      
-      if (!response.data.data) {
-        throw new Error('Invalid response format');
-      }
-      
-      setStockData(response.data.data);
     } catch (err: any) {
       console.error('Error fetching stock data:', err);
-      if (axios.isAxiosError(err)) {
-        if (err.response) {
-          setError(err.response.data.error || '서버 오류가 발생했습니다.');
-        } else if (err.request) {
-          setError('서버에 연결할 수 없습니다. 다시 시도해주세요.');
-        } else {
-          setError('요청 설정 중 오류가 발생했습니다.');
-        }
-      } else {
-        setError(err.message || '주식 데이터를 가져오는데 실패했습니다. 다시 시도해주세요.');
-      }
+      setError(err.message || '주식 데이터를 가져오는데 실패했습니다. 다시 시도해주세요.');
     } finally {
       setLoading(false);
     }
