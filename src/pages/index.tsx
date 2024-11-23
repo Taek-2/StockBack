@@ -78,7 +78,7 @@ export default function Home() {
 
     try {
       // Alpha Vantage API key
-      const API_KEY = 'demo'; // 실제 API 키로 교체 필요
+      const API_KEY = '756N6G3DF25M7M9O';
 
       // Adjust Korean stock symbols for Alpha Vantage
       const adjustedSymbol = tickerSymbol.replace('.KS', '.KRX');
